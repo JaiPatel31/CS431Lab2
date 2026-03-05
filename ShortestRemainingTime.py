@@ -1,15 +1,19 @@
-# It is a non-preemptive algorithm. It usese the total time required by a process to
-# execute as the basis for scheduling.
-# The process with the smallest total time to completion is selected for execution next
-from typing import List, Dict, Tuple
-from dataclasses import dataclass
+# Shortest Remaining Time (SRT) scheduling algorithm implementation in Python
+#Premptive SJF
+
+from dataclasses import dataclass, field
 
 @dataclass(order=True)
 class Process:
     arrival_time: int
     burst_time: int
     process_id: str
-def sjf(processes):
+    remaining_time: int = field(init=False)  # This field will be initialized in __post_init__
+
+    def __post_init__(self):
+        self.remaining_time = self.burst_time  # Initialize remaining time to burst time
+
+def srt(processes):
     # Copy and sort processes by arrival
     all_process = sorted(processes, key=lambda p: (p.arrival_time, p.process_id))
 
@@ -37,26 +41,43 @@ def sjf(processes):
             t = all_process[0].arrival_time
             continue
         # choose the next process to run
-        ready_processes.sort(key=lambda p: (p.burst_time, p.arrival_time))
+        ready_processes.sort(key=lambda p: (p.remaining_time, p.arrival_time))
 
         #take the process with the shortest burst time
         the_ready_process = ready_processes.pop(0)
 
-        # simulate
+        # simulate for 1 unit of time (preemptive)
         start = t
-        end = start + the_ready_process.burst_time
-        scheduled_processes.append((the_ready_process, start, end))
-        completion_times[the_ready_process.process_id] = end
+        end = start + 1  # Simulate for 1 unit of time
+
+        if scheduled_processes:
+            last_p, last_s, last_e = scheduled_processes[-1]
+            if last_p.process_id == the_ready_process.process_id and last_e == start:
+                # extend the last segment
+                scheduled_processes[-1] = (last_p, last_s, end)
+            else:
+                scheduled_processes.append((the_ready_process, start, end))
+        else:
+            scheduled_processes.append((the_ready_process, start, end))
+
+        # Decrease the remaining time of the running process
+        the_ready_process.remaining_time -= 1
+
+        if the_ready_process.remaining_time == 0:
+            completion_times[the_ready_process.process_id] = end
+        else:
+            ready_processes.append(the_ready_process)  # Re-add to ready queue if not finished
 
         t = end
 
-
     return scheduled_processes, completion_times
+
 def tat(processes, completion_times):
     return {p.process_id: completion_times[p.process_id] - p.arrival_time for p in processes}
 
 def att(tats):
     return sum(tats.values()) / len(tats) if tats else 0.0
+
 def wt (processes, tats):
     return {p.process_id: tats[p.process_id] - p.burst_time for p in processes}
 
@@ -71,7 +92,7 @@ example_processes = [
     Process(arrival_time=8, burst_time=2, process_id='p5'),
 ]
 
-scheduled_processes, completion_times = sjf(example_processes)
+scheduled_processes, completion_times = srt(example_processes)
 
 tats = tat(example_processes, completion_times)
 average_tat = att(tats)

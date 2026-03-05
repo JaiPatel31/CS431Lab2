@@ -1,20 +1,22 @@
-# It is a non-preemptive algorithm. It usese the total time required by a process to
-# execute as the basis for scheduling.
-# The process with the smallest total time to completion is selected for execution next
-from typing import List, Dict, Tuple
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from collections import deque
 
 @dataclass(order=True)
 class Process:
     arrival_time: int
     burst_time: int
     process_id: str
-def sjf(processes):
+    remaining_time: int = field(init=False)  # This field will be initialized in __post_init__
+
+    def __post_init__(self):
+        self.remaining_time = self.burst_time  # Initialize remaining time to burst time
+
+def rr(processes, quantum):
     # Copy and sort processes by arrival
     all_process = sorted(processes, key=lambda p: (p.arrival_time, p.process_id))
 
     # list of ready processes
-    ready_processes = []
+    ready_processes = deque()
 
     # list of scheduled processes
     scheduled_processes = []
@@ -36,27 +38,34 @@ def sjf(processes):
             # Jump time to next process arrival time
             t = all_process[0].arrival_time
             continue
-        # choose the next process to run
-        ready_processes.sort(key=lambda p: (p.burst_time, p.arrival_time))
-
-        #take the process with the shortest burst time
-        the_ready_process = ready_processes.pop(0)
-
-        # simulate
+        # take the next process from the ready queue
+        the_ready_process = ready_processes.popleft()
+        # simulate for quantum time or remaining time, whichever is smaller
         start = t
-        end = start + the_ready_process.burst_time
+        time_slice = min(quantum, the_ready_process.remaining_time)
+        end = start + time_slice
+
         scheduled_processes.append((the_ready_process, start, end))
-        completion_times[the_ready_process.process_id] = end
 
-        t = end
+        t= end
+        the_ready_process.remaining_time -= time_slice
 
+        while all_process and all_process[0].arrival_time <= t:
+            ready_processes.append(all_process.pop(0))
+
+        if the_ready_process.remaining_time <= 0:
+            completion_times[the_ready_process.process_id] = end
+        else:
+            ready_processes.append(the_ready_process)
 
     return scheduled_processes, completion_times
+
 def tat(processes, completion_times):
     return {p.process_id: completion_times[p.process_id] - p.arrival_time for p in processes}
 
 def att(tats):
     return sum(tats.values()) / len(tats) if tats else 0.0
+
 def wt (processes, tats):
     return {p.process_id: tats[p.process_id] - p.burst_time for p in processes}
 
@@ -64,14 +73,14 @@ def rt (processes, completion_times):
     return {p.process_id: completion_times[p.process_id] - p.arrival_time - p.burst_time for p in processes}
 
 example_processes = [
-    Process(arrival_time=0, burst_time=3, process_id='p1'),
-    Process(arrival_time=2, burst_time=6, process_id='p2'),
-    Process(arrival_time=4, burst_time=4, process_id='p3'),
-    Process(arrival_time=6, burst_time=5, process_id='p4'),
-    Process(arrival_time=8, burst_time=2, process_id='p5'),
+    Process(arrival_time=0, burst_time=2, process_id='p1'),
+    Process(arrival_time=1, burst_time=1, process_id='p2'),
+    Process(arrival_time=2, burst_time=8, process_id='p3'),
+    Process(arrival_time=3, burst_time=4, process_id='p4'),
+    Process(arrival_time=4, burst_time=5, process_id='p5'),
 ]
 
-scheduled_processes, completion_times = sjf(example_processes)
+scheduled_processes, completion_times = rr(example_processes,2)
 
 tats = tat(example_processes, completion_times)
 average_tat = att(tats)
