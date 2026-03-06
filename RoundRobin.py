@@ -53,7 +53,7 @@ def rr(processes, quantum):
         while all_process and all_process[0].arrival_time <= t:
             ready_processes.append(all_process.pop(0))
 
-        if the_ready_process.remaining_time <= 0:
+        if the_ready_process.remaining_time == 0:
             completion_times[the_ready_process.process_id] = end
         else:
             ready_processes.append(the_ready_process)
