@@ -75,10 +75,3 @@ Troubleshooting
 
 - If you see SyntaxError or other exceptions, confirm you are using Python 3.8+.
 - If you modify the scripts, run them after each change to verify behavior.
-
-Next steps (optional improvements)
-
-- Add simple CLI parsing (argparse) so processes and quantum can be passed on the command line.
-- Add unit tests for each scheduler.
-
-If you'd like, I can implement CLI arguments for these scripts (or add a single driver that runs all algorithms on the same input). Which would you prefer?
